@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template for creating an ec2 instance.
+Parameters:
+  KeyName:
+    Description: Key Pair Name
+    Type: String
+    Default: Rabi
+  UserName:
+    Description: User Name
+    Type: String
+    Default: ''
+  InstanceType:
+    Description: Instance Type
+    Type: String
+    Default: t2.micro
+  InstanceImageId:
+    Description: Image ID
+    Type: String
+    Default: 'ami-07d0cf3af28718ef8'
+
+Resources:
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access via port 22
+      VpcId: vpc-b7cadbcf
+      SecurityGroupIngress:
+        - 
+          Description: Allowed from anywhere
+          IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: '0.0.0.0/0'
+      Tags:
+        -
+          Key: username
+          Value: !Ref UserName
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref InstanceImageId
+      InstanceType: !Ref InstanceType
+      SecurityGroupIds:
+        -
+          !GetAtt InstanceSecurityGroup.GroupId
+      KeyName: !Ref KeyName
+      Tags:
+        -
+          Key: username
+          Value: !Ref UserName
+
+Outputs:
+  InstancePublicIP:
+    Description: The Dns Address of EC2 Instance
+    Value: !GetAtt EC2Instance.PublicIp

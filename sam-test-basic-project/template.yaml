@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: '2010-09-09'
+# Transform: 'AWS::Serverless-2016-10-31'
+Description: A simple backend with a RESTful API endpoint using Amazon API Gateway.
+Resources:
+  myFirstLambdaHandler:
+    Type: 'AWS::lambda::Function'
+    Properties:
+      Handler: handler.hello
+      Runtime: nodejs10.x
+      CodeUri: .
+      Description: A simple backend with a RESTful API endpoint using Amazon API Gateway.
+      MemorySize: 512
+      Timeout: 10
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /MyResource
+            Method: ANY
