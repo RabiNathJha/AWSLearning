@@ -1,0 +1,105 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template for creating an ec2 instance.
+Parameters:
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Key Pair Name
+    Type: String
+    Default: Rabi
+  UserName:
+    Description: User Name
+    Type: String
+    Default: ''
+  InstanceType:
+    Description: Instance Type
+    Type: String
+    Default: t2.micro
+  InstanceImageId:
+    Description: Image ID
+    Type: String
+    Default: 'ami-07d0cf3af28718ef8'
+  VpcId:
+    Description: Vpc ID
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-b7cadbcf
+  SubnetID:
+    Type: AWS::EC2::Subnet::Id
+    Description: SubnetID with validation and default value
+    Default: subnet-c6c1e6a2
+
+Resources:
+  InstanceSecurityGroupPublic:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access via port 22
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - 
+          Description: Allowed from anywhere
+          IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: '0.0.0.0/0'
+      Tags:
+        -
+          Key: username
+          Value: !Ref UserName
+
+  InstanceSecurityGroupPrivate:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Enable SSH access via port 22
+        VpcId: !Ref VpcId
+        SecurityGroupIngress:
+          - 
+            Description: Allowed from inside Default VPC
+            IpProtocol: tcp
+            FromPort: '22'
+            ToPort: '22'
+            CidrIp: 172.31.0.0/20
+        Tags:
+          -
+            Key: username
+            Value: !Ref UserName
+
+  EC2InstancePublic:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref InstanceImageId
+      InstanceType: !Ref InstanceType
+      SecurityGroupIds:
+        -
+          !GetAtt InstanceSecurityGroupPublic.GroupId
+      KeyName: !Ref KeyName
+      SubnetId: !Ref SubnetID
+      # AvailabilityZone: us-east-1a
+      Tags:
+        -
+          Key: username
+          Value: !Ref UserName
+
+  EC2InstancePrivate:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref InstanceImageId
+      InstanceType: !Ref InstanceType
+      SecurityGroupIds:
+        -
+          !GetAtt InstanceSecurityGroupPrivate.GroupId
+      KeyName: !Ref KeyName
+      SubnetId: !Ref SubnetID
+      # AvailabilityZone: us-east-1a
+      Tags:
+        -
+          Key: username
+          Value: !Ref UserName
+
+
+Outputs:
+  InstancePublicIP:
+    Description: The Public IP Address of Public EC2 Instance
+    Value: !GetAtt EC2InstancePublic.PublicIp
+  InstancePrivateIP:
+    Description: The Private IP Address of Private EC2 Instance
+    Value: !GetAtt EC2InstancePrivate.PrivateIp
+  
