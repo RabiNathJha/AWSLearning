@@ -2,6 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: CloudFormation template for creating an ec2 instance.
 Parameters:
   KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
     Description: Key Pair Name
     Type: String
     Default: Rabi
@@ -17,13 +18,21 @@ Parameters:
     Description: Image ID
     Type: String
     Default: 'ami-07d0cf3af28718ef8'
+  VpcId:
+    Description: Vpc ID
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-b7cadbcf
+  SubnetID:
+    Type: AWS::EC2::Subnet::Id
+    Description: SubnetID with validation and default value
+    Default: subnet-c6c1e6a2
 
 Resources:
   InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Enable SSH access via port 22
-      VpcId: vpc-b7cadbcf
+      VpcId: !Ref VpcId
       SecurityGroupIngress:
         - 
           Description: Allowed from anywhere
@@ -45,6 +54,8 @@ Resources:
         -
           !GetAtt InstanceSecurityGroup.GroupId
       KeyName: !Ref KeyName
+      SubnetId: !Ref SubnetID
+      # AvailabilityZone: us-east-1a
       Tags:
         -
           Key: username
@@ -52,5 +63,9 @@ Resources:
 
 Outputs:
   InstancePublicIP:
-    Description: The Dns Address of EC2 Instance
+    Description: The Public IP Address of EC2 Instance
     Value: !GetAtt EC2Instance.PublicIp
+  InstancePrivateIP:
+    Description: The Private IP Address of EC2 Instance
+    Value: !GetAtt EC2Instance.PrivateIp
+  
