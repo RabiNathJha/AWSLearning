@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template for autoscaling of EC2 instance.
+Parameters:
+  UserName:
+    Description: User Name
+    Type: String
+    Default: ''
+  Environment:
+    Description: Environment Type
+    Type: String
+    Default: dev
+  InstanceImageId:
+    Description: Image ID
+    Type: String
+    Default: 'ami-07d0cf3af28718ef8'
+  InstanceType:
+    Description: Instance Type
+    Type: String
+    Default: t2.micro
+  VpcId:
+    Description: Vpc ID
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-b7cadbcf
+
+Resources:
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access via port 22
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - 
+          Description: Allowed from anywhere
+          IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: '0.0.0.0/0'
+      Tags:
+        -
+          Key: username
+          Value: !Ref UserName
+
+  EC2LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        BlockDeviceMappings:
+          -
+            DeviceName: /dev/sda1
+            Ebs:
+              VolumeSize: 10
+              VolumeType: gp2
+              Encrypted: false
+        ImageId: !Ref InstanceImageId
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref UserName
+        SecurityGroupIds:
+          -
+            !GetAtt InstanceSecurityGroup.GroupId
+
+  AutoScalingEC2:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AvailabilityZones:
+        - us-east-1a
+        - us-east-1b
+      AutoScalingGroupName: !Sub aws-poc-alb-${Environment}
+      LaunchTemplate:
+        LaunchTemplateId: !Ref EC2LaunchTemplate
+        Version: '1'
+      MaxSize: '3'
+      MinSize: '2'
+      HealthCheckGracePeriod: 2
+      Tags:
+        -
+          Key: username
+          Value: !Ref UserName
+          PropagateAtLaunch: true
