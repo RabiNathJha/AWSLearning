@@ -8,7 +8,7 @@ Parameters:
   Environment:
     Description: Environment Type
     Type: String
-    Default: dev
+    Default: dev2
   InstanceImageId:
     Description: Image ID
     Type: String
@@ -21,19 +21,53 @@ Parameters:
     Description: Vpc ID
     Type: AWS::EC2::VPC::Id
     Default: vpc-b7cadbcf
+  CidrIp:
+    Description: Cidr Ip for default VPC
+    Type: String
+    Default: '172.31.0.0/16'
 
 Resources:
   InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable SSH access via port 22
+      GroupDescription: Enable public SSH access and open port 80 and 8080 inside VPC
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - 
-          Description: Allowed from anywhere
+          Description: Allowed SSH from anywhere
           IpProtocol: tcp
           FromPort: '22'
           ToPort: '22'
+          CidrIp: '0.0.0.0/0'
+        - 
+          Description: Open port 80 for VPC
+          IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: !Ref CidrIp
+        - 
+          Description: Open port 8080 for VPC
+          IpProtocol: tcp
+          FromPort: '8080'
+          ToPort: '8080'
+          CidrIp: !Ref CidrIp
+      Tags:
+        -
+          Key: username
+          Value: !Ref UserName
+
+
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable public access of port 80 of load balancer
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - 
+          Description: Open port 80 for VPC
+          IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
           CidrIp: '0.0.0.0/0'
       Tags:
         -
@@ -75,6 +109,8 @@ Resources:
       MaxSize: '3'
       MinSize: '2'
       HealthCheckGracePeriod: 2
+      TargetGroupARNs:
+        - !Ref TargetGroupOne
       Tags:
         -
           Key: username
@@ -104,7 +140,51 @@ Resources:
       Namespace: AWS/EC2
       Dimensions:
       - Name: AutoScalingGroupName
-        Value:
-          Ref: AutoScalingEC2
+        Value: !Ref AutoScalingEC2
       ComparisonOperator: GreaterThanOrEqualToThreshold
       MetricName: CPUUtilization
+
+  ALoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub aws-poc-appLoadBalancer-${Environment}
+      IpAddressType: ipv4
+      Scheme: internet-facing
+      SecurityGroups: 
+        - !GetAtt ALBSecurityGroup.GroupId
+      Subnets: 
+        - subnet-515c300c
+        - subnet-c6c1e6a2
+      Type: application
+      Tags: 
+        -
+          Key: username
+          Value: !Ref UserName
+  
+  TargetGroupOne:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 10
+      Port: 80
+      Protocol: HTTP
+      Tags: 
+        -
+          Key: username
+          Value: !Ref UserName
+      Name: !Sub aws-poc-alb-targetG-${Environment}
+      TargetType: instance
+      VpcId: vpc-b7cadbcf
+    
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        -
+          TargetGroupArn: !Ref TargetGroupOne
+          Type: forward
+      LoadBalancerArn: !Ref ALoadBalancer
+      Port: 80
+      Protocol: HTTP
+      
+
